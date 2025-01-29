@@ -95,7 +95,8 @@ EXPOSE 8188
 
 USER comfy
 WORKDIR ${COMFYUSER_DIR}
-COPY --chown=comfy:comfy --chmod=555 init.bash comfyui-nvidia_init.bash
+COPY --chown=comfy:comfy init.bash comfyui-nvidia_init.bash
+RUN chmod 555 comfyui-nvidia_init.bash
 
 ARG BUILD_DATE="unknown"
 LABEL comfyui-nvidia-docker-build=${BUILD_DATE}
