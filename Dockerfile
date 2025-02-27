@@ -103,9 +103,8 @@ RUN chmod 555 comfyui-nvidia_init.bash
 
 ##### Install Python Packages and SageAttention
 
-# Install Triton, Torch, and dependencies
 RUN pip install --no-cache-dir \
-    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu125 \
+    torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu125 \
     triton==3.0.0
 
 # Clone and install SageAttention
