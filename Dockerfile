@@ -1,3 +1,4 @@
+# Use NVIDIA CUDA runtime image
 FROM nvidia/cuda:12.5.1-runtime-ubuntu24.04
 
 # Extended from https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/12.5.1/ubuntu2404/runtime/Dockerfile
@@ -14,11 +15,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ARG BASE_DOCKER_FROM=nvidia/cuda:12.5.1-runtime-ubuntu24.04
 
-##### Base
+##### Base Setup
 
 # Install system packages
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -y --fix-missing\
+RUN apt-get update -y --fix-missing \
   && apt-get install -y \
     apt-utils \
     locales \
@@ -26,7 +27,7 @@ RUN apt-get update -y --fix-missing\
     && apt-get upgrade -y \
     && apt-get clean
 
-# UTF-8
+# UTF-8 locale setup
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG=en_US.utf8
 ENV LC_ALL=C
@@ -36,8 +37,8 @@ RUN apt-get update -y \
   && apt-get install -y software-properties-common \
   && add-apt-repository -y ppa:deadsnakes/ppa \
   && apt-get update -y
-  
-# Install needed packages, ensuring Python 3.11 is installed
+
+# Install necessary system packages including Python 3.11
 RUN apt-get update -y --fix-missing \
   && apt-get upgrade -y \
   && apt-get install -y \
@@ -60,7 +61,7 @@ RUN apt-get update -y --fix-missing \
     ffmpeg \
   && apt-get clean
 
-# Update alternatives to make python3 point to python3.11
+# Update Python 3 alternatives
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
   && update-alternatives --set python3 /usr/bin/python3.11 \
   && python3 --version
@@ -70,6 +71,7 @@ RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py \
   && python3 /tmp/get-pip.py \
   && rm /tmp/get-pip.py
 
+# Store base build details
 ENV BUILD_FILE="/etc/image_base.txt"
 ARG BASE_DOCKER_FROM
 RUN echo "DOCKER_FROM: ${BASE_DOCKER_FROM}" | tee ${BUILD_FILE}
@@ -79,8 +81,7 @@ ARG BUILD_BASE="unknown"
 LABEL comfyui-nvidia-docker-build-from=${BUILD_BASE}
 RUN it="/etc/build_base.txt"; echo ${BUILD_BASE} > $it && chmod 555 $it
 
-##### ComfyUI preparation
-# The comfy user will have UID 1024 and GID 1024
+##### User Setup
 ENV COMFYUSER_DIR="/comfy"
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \
     && useradd -u 1024 -U -d ${COMFYUSER_DIR} -s /bin/bash -m comfy \
@@ -95,8 +96,30 @@ EXPOSE 8188
 
 USER comfy
 WORKDIR ${COMFYUSER_DIR}
+
+# Copy initialization scripts
 COPY --chown=comfy:comfy init.bash comfyui-nvidia_init.bash
 RUN chmod 555 comfyui-nvidia_init.bash
+
+##### Install Python Packages and SageAttention
+
+# Install Triton, Torch, and dependencies
+RUN pip install --no-cache-dir \
+    torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu125 \
+    triton==3.0.0
+
+# Clone and install SageAttention
+RUN git clone https://github.com/thu-ml/SageAttention.git /opt/SageAttention \
+    && cd /opt/SageAttention \
+    && pip install -e .
+
+##### Install ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI \
+    && cd /opt/ComfyUI \
+    && pip install -r requirements.txt
+
+# Make sure ComfyUI runs with SageAttention
+ENV USE_SAGE_ATTENTION=1
 
 ARG BUILD_DATE="unknown"
 LABEL comfyui-nvidia-docker-build=${BUILD_DATE}
