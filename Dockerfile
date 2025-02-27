@@ -108,11 +108,9 @@ RUN pip install --no-cache-dir \
     triton==3.0.0
 
 # Clone and install SageAttention
-USER root
-RUN git clone https://github.com/thu-ml/SageAttention.git /opt/SageAttention \
-    && chown -R comfy:comfy /opt/SageAttention
-USER comfy
-RUN cd /opt/SageAttention && pip install -e .
+RUN git clone https://github.com/thu-ml/SageAttention.git ${COMFYUSER_DIR}/SageAttention \
+    && cd ${COMFYUSER_DIR}/SageAttention \
+    && pip install -e .
 
 ##### Install ComfyUI
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI \
