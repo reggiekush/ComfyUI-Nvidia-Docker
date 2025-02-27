@@ -1,5 +1,5 @@
 # Use NVIDIA CUDA runtime image
-FROM nvidia/cuda:12.5.1-runtime-ubuntu24.04
+FROM nvidia/cuda:12.5.1-devel-ubuntu24.04
 
 # Extended from https://gitlab.com/nvidia/container-images/cuda/-/blob/master/dist/12.5.1/ubuntu2404/runtime/Dockerfile
 ENV NV_CUDNN_VERSION=9.3.0.75-1
