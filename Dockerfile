@@ -115,6 +115,19 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI && \
 # -------------------------------------------------------------------
 ENV USE_SAGE_ATTENTION=1
 
+# Switch to root if you need to adjust permissions before copying:
+USER root
+
+# Copy your local comfyui-nvidia_init.bash into /comfy/ inside the container
+COPY --chown=comfy:comfy comfyui-nvidia_init.bash /comfy/
+
+# (Optional) Make it executable:
+RUN chmod 555 /comfy/comfyui-nvidia_init.bash
+
+# Then switch back to the comfy user
+USER comfy
+WORKDIR /comfy
+
 # -------------------------------------------------------------------
 # 8) Final launch command
 # -------------------------------------------------------------------
