@@ -107,7 +107,10 @@ RUN pip install --no-cache-dir \
     torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu125 \
     triton==3.0.0
 
-# Clone and install SageAttention
+# Set GPU arch for SageAttention so it doesn't fail at build time
+ENV GPU_ARCHS=86
+
+# Now SageAttention won't look for a physical GPU, it will compile for SM_86
 RUN git clone https://github.com/thu-ml/SageAttention.git ${COMFYUSER_DIR}/SageAttention \
     && cd ${COMFYUSER_DIR}/SageAttention \
     && pip install -e .
