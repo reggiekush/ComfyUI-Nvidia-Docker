@@ -87,7 +87,7 @@ ENV COMFYUSER_DIR="/comfy"
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
     useradd -u 1024 -U -d ${COMFYUSER_DIR} -s /bin/bash -m comfy && \
     usermod -G users comfy && \
-    adduser comfy sudo
+    adduser comfy sudo \
     && test -d ${COMFYUSER_DIR}
 RUN it="/etc/comfyuser_dir"; echo ${COMFYUSER_DIR} > $it && chmod 555 $it
 
