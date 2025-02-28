@@ -108,10 +108,9 @@ RUN pip install --no-cache-dir \
     triton==3.0.0
 
 # Set GPU arch for SageAttention so it doesn't fail at build time
-ENV GPU_ARCHS=86
+ENV GPU_ARCHS=8.6  # For an RTX 3090
 
-# Now SageAttention won't look for a physical GPU, it will compile for SM_86
-RUN git clone https://github.com/thu-ml/SageAttention.git ${COMFYUSER_DIR}/SageAttention \
+RUN git clone https://github.com/reggiekush/SageAttention.git ${COMFYUSER_DIR}/SageAttention \
     && cd ${COMFYUSER_DIR}/SageAttention \
     && pip install -e .
 
