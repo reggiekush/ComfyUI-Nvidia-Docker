@@ -66,6 +66,23 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
     update-alternatives --set python3 /usr/bin/python3.11 && \
     python3 --version
 
+# Store base build details
+ENV BUILD_FILE="/etc/image_base.txt"
+ARG BASE_DOCKER_FROM
+
+# Re-create /etc/image_base.txt
+RUN echo "DOCKER_FROM: ${BASE_DOCKER_FROM}" | tee ${BUILD_FILE} && \
+    echo "CUDNN: ${NV_CUDNN_PACKAGE_NAME} (${NV_CUDNN_VERSION})" | tee -a ${BUILD_FILE}
+
+# Re-create /etc/comfyuser_dir
+RUN it="/etc/comfyuser_dir"; echo ${COMFYUSER_DIR} > $it && chmod 555 $it
+
+ARG BUILD_BASE="unknown"
+LABEL comfyui-nvidia-docker-build-from=${BUILD_BASE}
+
+# Re-create /etc/build_base.txt
+RUN it="/etc/build_base.txt"; echo ${BUILD_BASE} > $it && chmod 555 $it
+
 # -------------------------------------------------------------------
 # 3) Create comfy user
 # -------------------------------------------------------------------
