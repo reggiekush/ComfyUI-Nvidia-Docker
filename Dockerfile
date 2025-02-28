@@ -4,11 +4,10 @@
 FROM nvidia/cuda:12.5.1-devel-ubuntu24.04
 
 # -------------------------------------------------------------------
-# 2) Install system libraries and set up environment
+# 2) Minimal environment setup (cudnn, locales, python, etc.)
 # -------------------------------------------------------------------
 ENV DEBIAN_FRONTEND=noninteractive
 
-# CUDNN environment (matching the base image tags)
 ENV NV_CUDNN_VERSION=9.3.0.75-1
 ENV NV_CUDNN_PACKAGE_NAME="libcudnn9"
 ENV NV_CUDA_ADD=cuda-12
@@ -16,13 +15,13 @@ ENV NV_CUDNN_PACKAGE="$NV_CUDNN_PACKAGE_NAME-$NV_CUDA_ADD=$NV_CUDNN_VERSION"
 
 LABEL com.nvidia.cudnn.version="${NV_CUDNN_VERSION}"
 
-# Install cuDNN, then hold its version
+# Install cuDNN and mark it 'hold'
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ${NV_CUDNN_PACKAGE} && \
     apt-mark hold ${NV_CUDNN_PACKAGE_NAME}-${NV_CUDA_ADD} && \
     apt-get clean
 
-# Install Ubuntu packages, add deadsnakes for Python 3.11
+# Install base packages and Python 3.11 from deadsnakes
 RUN apt-get update -y --fix-missing && \
     apt-get install -y \
       apt-utils \
@@ -52,7 +51,7 @@ RUN apt-get update -y --fix-missing && \
     apt-get upgrade -y && \
     apt-get clean
 
-# Set locale to UTF-8
+# Set locale
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG=en_US.utf8
 ENV LC_ALL=C
@@ -68,44 +67,47 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
     python3 --version
 
 # -------------------------------------------------------------------
-# 3) Create comfy user and ensure /opt/ComfyUI is writable
+# 3) Create comfy user
 # -------------------------------------------------------------------
 ENV COMFYUSER_DIR="/comfy"
-RUN useradd -u 1024 -U -d ${COMFYUSER_DIR} -s /bin/bash -m comfy && \
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
+    useradd -u 1024 -U -d ${COMFYUSER_DIR} -s /bin/bash -m comfy && \
     usermod -G users comfy && \
-    # Give comfy user sudo with no password
-    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
-    adduser comfy sudo && \
-    # Create /opt/ComfyUI (owned by comfy)
-    mkdir -p /opt/ComfyUI && chown comfy:comfy /opt/ComfyUI
+    adduser comfy sudo
 
-# -------------------------------------------------------------------
-# 4) Switch to comfy user
-# -------------------------------------------------------------------
-USER comfy
-WORKDIR ${COMFYUSER_DIR}
 ENV NVIDIA_VISIBLE_DEVICES=all
 EXPOSE 8188
 
 # -------------------------------------------------------------------
+# 4) Switch to comfy user, set /comfy as WORKDIR
+# -------------------------------------------------------------------
+USER comfy
+WORKDIR ${COMFYUSER_DIR}
+
+# -------------------------------------------------------------------
 # 5) Install PyTorch + SageAttention
 # -------------------------------------------------------------------
-# Torch + extra index for CUDA 12.5 (PyTorch whl)
+#  - We use Torch's CUDA 12.5 wheels from their extra index URL.
+#  - Then we set GPU_ARCHS=8.6 so SageAttention knows which SM to compile for (e.g. 3090).
 RUN pip install --no-cache-dir \
     torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu125 \
     triton==3.0.0
 
-# This environment variable tells the patched SageAttention setup.py which SM to compile for
 ENV GPU_ARCHS=8.6
 
-# Clone and install SageAttention from your fork (which has the new setup.py)
-RUN git clone https://github.com/reggiekush/SageAttention.git ${COMFYUSER_DIR}/SageAttention && \
-    cd ${COMFYUSER_DIR}/SageAttention && \
+# Clone & install your forked SageAttention (with the patched setup.py).
+RUN git clone https://github.com/reggiekush/SageAttention.git "${COMFYUSER_DIR}/SageAttention" && \
+    cd "${COMFYUSER_DIR}/SageAttention" && \
     pip install -e .
 
 # -------------------------------------------------------------------
 # 6) Install ComfyUI in /opt/ComfyUI
 # -------------------------------------------------------------------
+# We keep ComfyUI separate in /opt, but comfy user still owns it.
+USER root
+RUN mkdir -p /opt/ComfyUI && chown comfy:comfy /opt/ComfyUI
+USER comfy
+
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI && \
     cd /opt/ComfyUI && \
     pip install -r requirements.txt
@@ -115,20 +117,16 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI && \
 # -------------------------------------------------------------------
 ENV USE_SAGE_ATTENTION=1
 
-# Switch to root if you need to adjust permissions before copying:
+# -------------------------------------------------------------------
+# 8) Copy in your local comfyui-nvidia_init.bash to /comfy
+# -------------------------------------------------------------------
 USER root
-
-# Copy your local comfyui-nvidia_init.bash into /comfy/ inside the container
 COPY --chown=comfy:comfy comfyui-nvidia_init.bash /comfy/
-
-# (Optional) Make it executable:
 RUN chmod 555 /comfy/comfyui-nvidia_init.bash
-
-# Then switch back to the comfy user
 USER comfy
 WORKDIR /comfy
 
 # -------------------------------------------------------------------
-# 8) Final launch command
+# 9) Final command
 # -------------------------------------------------------------------
 CMD ["./comfyui-nvidia_init.bash"]
