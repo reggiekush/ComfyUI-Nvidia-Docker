@@ -74,9 +74,6 @@ ARG BASE_DOCKER_FROM
 RUN echo "DOCKER_FROM: ${BASE_DOCKER_FROM}" | tee ${BUILD_FILE} && \
     echo "CUDNN: ${NV_CUDNN_PACKAGE_NAME} (${NV_CUDNN_VERSION})" | tee -a ${BUILD_FILE}
 
-# Re-create /etc/comfyuser_dir
-RUN it="/etc/comfyuser_dir"; echo ${COMFYUSER_DIR} > $it && chmod 555 $it
-
 ARG BUILD_BASE="unknown"
 LABEL comfyui-nvidia-docker-build-from=${BUILD_BASE}
 
@@ -91,6 +88,8 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
     useradd -u 1024 -U -d ${COMFYUSER_DIR} -s /bin/bash -m comfy && \
     usermod -G users comfy && \
     adduser comfy sudo
+    && test -d ${COMFYUSER_DIR}
+RUN it="/etc/comfyuser_dir"; echo ${COMFYUSER_DIR} > $it && chmod 555 $it
 
 ENV NVIDIA_VISIBLE_DEVICES=all
 EXPOSE 8188
