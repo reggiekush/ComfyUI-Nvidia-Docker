@@ -87,10 +87,6 @@ WORKDIR ${COMFYUSER_DIR}
 ENV NVIDIA_VISIBLE_DEVICES=all
 EXPOSE 8188
 
-# Copy any local scripts you have (optional)
-COPY --chown=comfy:comfy init.bash comfyui-nvidia_init.bash .
-RUN chmod 555 comfyui-nvidia_init.bash || true
-
 # -------------------------------------------------------------------
 # 5) Install PyTorch + SageAttention
 # -------------------------------------------------------------------
