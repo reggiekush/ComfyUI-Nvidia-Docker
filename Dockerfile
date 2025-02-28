@@ -108,7 +108,7 @@ RUN pip install --no-cache-dir \
     triton==3.0.0
 
 # Set GPU arch for SageAttention so it doesn't fail at build time
-ENV GPU_ARCHS=8.6  # For an RTX 3090
+ENV GPU_ARCHS=8.6
 
 RUN git clone https://github.com/reggiekush/SageAttention.git ${COMFYUSER_DIR}/SageAttention \
     && cd ${COMFYUSER_DIR}/SageAttention \
